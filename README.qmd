@@ -1,23 +1,20 @@
-# tree-approximation
+---
+title: "tree-approximation"
+format: gfm
+---
 
-When a predictive model is complex, approximating the model can be a
-useful strategy to understand the model’s behavior. Using only a small
-subset of predictors to describe overall model behavior is an attractive
-means of “decoding” black box models such as neural networks. This is
-illustrated in “Regression Modeling Strategies”<sup>\[1\]</sup> and
-“Understanding neural networks using regression trees: an application to
-multiple myeloma survival data”<sup>\[2\]</sup>.
+When a predictive model is complex, approximating the model can be a useful strategy to understand the model's behavior. Using only a small subset of predictors to describe overall model behavior is an attractive means of "decoding" black box models such as neural networks. This is illustrated in "Regression Modeling Strategies"^\[1\]^ and "Understanding neural networks using regression trees: an application to multiple myeloma survival data"^\[2\]^.
 
-As an example, sale price of homes in Ames, Iowa will be
-predicted<sup>\[3\]</sup> . Tidymodels and Keras are used for modeling.
+As an example, sale price of homes in Ames, Iowa will be predicted^\[3\]^ . Tidymodels and Keras are used for modeling.
 
-``` r
+```{r message = FALSE}
 library(keras)
 library(tidyverse)
 library(tidymodels)
 ```
 
-``` r
+
+```{r}
 set.seed(1)
 
 # initial split of data
@@ -64,9 +61,10 @@ yval <-
   pull(Sale_Price)
 ```
 
+
 Fitting a neural network to serve as a complex model.
 
-``` r
+```{r message = FALSE, results = 'hide'}
 # NN with 2 hidden layers, loss is MSE
 tensorflow::set_random_seed(1)
 
@@ -90,32 +88,17 @@ history <-
 
 # trace plot
 plot(history)
-```
 
-![](README_files/figure-commonmark/unnamed-chunk-3-1.png)
-
-``` r
 # model diagram
 plot(model)
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-3-2.png)
+Taking a look at actual vs. predicted plots:
 
-Taking a look at actual vs. predicted plots:
-
-``` r
+```{r}
 predtrain <- predict(model, xtrain)
-```
-
-    51/51 - 0s - 93ms/epoch - 2ms/step
-
-``` r
 predval <- predict(model, xval)
-```
 
-    19/19 - 0s - 19ms/epoch - 1ms/step
-
-``` r
 bind_rows(data.frame(act = ytrain, pred = predtrain,
                      set = 'train', scale = 'log'),
           data.frame(act = yval, pred = predval,
@@ -131,25 +114,15 @@ bind_rows(data.frame(act = ytrain, pred = predtrain,
   facet_wrap(~scale, scales = 'free')
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-4-1.png)
+Decision tree approximation of neural network. Trees of varying depths are fit to the neural network's predictions.
 
-Decision tree approximation of neural network. Trees of varying depths
-are fit to the neural network’s predictions.
+"You need to set cp=0 in the controls the complexity of the tree. If cp\>0 the tree won't grown unless the increase in tree size doesn't improve the performance of the tree by at least cp." https://stats.stackexchange.com/questions/164042/setting-different-depth-in-rpart-but-didnt-actually-change
 
-“You need to set cp=0 in the controls the complexity of the tree. If
-cp\>0 the tree won’t grown unless the increase in tree size doesn’t
-improve the performance of the tree by at least cp.”
-https://stats.stackexchange.com/questions/164042/setting-different-depth-in-rpart-but-didnt-actually-change
-
-``` r
+```{r message = FALSE}
 # combining training and validation data and generating predictions
 xames <- rbind(xtrain, xval)
 predames <- predict(model, xames)
-```
 
-    69/69 - 0s - 68ms/epoch - 979us/step
-
-``` r
 # combining processed data and predictions
 xpredames <- 
   xames |> 
@@ -184,9 +157,9 @@ at_fits <-
             control = control_grid(save_pred = TRUE))
 ```
 
-Plot of decision tree complexity vs. model fit.
+Plot of decision tree complexity vs. model fit.
 
-``` r
+```{r}
 at_fits |> 
   collect_predictions() |> 
   
@@ -196,12 +169,9 @@ at_fits |>
   facet_wrap(~tree_depth)
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-6-1.png)
+Plot of R2 vs. tree depth. A decision tree with a depth of 3 can describe 60% of the variation of the neural network's output.
 
-Plot of R2 vs. tree depth. A decision tree with a depth of 3 can
-describe 60% of the variation of the neural network’s output.
-
-``` r
+```{r}
 at_fits |> 
   collect_metrics() |> 
   
@@ -209,19 +179,13 @@ at_fits |>
   geom_point()
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-7-1.png)
+Taking a look at this tree, some of the trends of the neural network's behavior can be interpreted. Although the price predictions are on the log scale and the variables are normalized, the directionality of the most influential variables appear near the root of the tree. For example:
 
-Taking a look at this tree, some of the trends of the neural network’s
-behavior can be interpreted. Although the price predictions are on the
-log scale and the variables are normalized, the directionality of the
-most influential variables appear near the root of the tree. For
-example:
+-   newer homes tend to be more expensive
+-   having central air is more expensive
+-   bigger garages are more expensive
 
-- newer homes tend to be more expensive
-- having central air is more expensive
-- bigger garages are more expensive
-
-``` r
+```{r warning = FALSE}
 at <- 
   at_fits |> 
   collect_metrics() |> 
@@ -239,10 +203,10 @@ at |>
                          digits = -4)
 ```
 
-![](README_files/figure-commonmark/unnamed-chunk-8-1.png)
+
 
 References:
 
-- \[1\] https://hbiostat.org/rmsc/validate#sec-val-approx
-- \[2\] https://pubmed.ncbi.nlm.nih.gov/11568952/
-- \[3\] https://jse.amstat.org/v19n3/decock.pdf
+- [1] https://hbiostat.org/rmsc/validate#sec-val-approx
+- [2] https://pubmed.ncbi.nlm.nih.gov/11568952/
+- [3] https://jse.amstat.org/v19n3/decock.pdf 
